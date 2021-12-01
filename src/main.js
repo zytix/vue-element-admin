@@ -1,6 +1,9 @@
 import Vue from 'vue'
 
 import Cookies from 'js-cookie'
+import { firestorePlugin } from 'vuefire'
+import { rtdbPlugin } from 'vuefire'
+import JsonExcel from 'vue-json-excel'
 
 import 'normalize.css/normalize.css' // a modern alternative to CSS resets
 
@@ -32,6 +35,10 @@ if (process.env.NODE_ENV === 'production') {
   const { mockXHR } = require('../mock')
   mockXHR()
 }
+
+Vue.use(firestorePlugin)
+Vue.use(rtdbPlugin)
+Vue.component('downloadExcel', JsonExcel)
 
 Vue.use(Element, {
   size: Cookies.get('size') || 'medium', // set element-ui default size

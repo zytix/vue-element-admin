@@ -1,35 +1,10 @@
 <template>
   <div class="app-container">
-    <el-button type="primary" icon="el-icon-document">
-      <download-excel
-        :data="products2"
-        :fields="customers_fields"
-        :name="'order_current_' + Date.now() + '.xls'"
-      >
-        Excel
-      </download-excel>
-    </el-button>
-    <el-button type="primary" icon="el-icon-refresh" @click="syncLightspeed">
-      Sync Lightspeed
-    </el-button>
-    <!--<el-button type="primary" icon="el-icon-time" @click="handleArchive">
-      Archiver
-    </el-button>
-    <el-button type="primary" icon="el-icon-time" @click="handleDelete">
-      Supprimer les commandes courantes
-    </el-button>
-    <div class="dropdown">
-      <button class="dropbtn">Dropdown</button>
-      <div class="dropdown-content">
-        <a @click="seeVoided">Active</a>
-        <a @click="seeVoided">Handle</a>
-      </div>
-    </div>-->
     <h3>Nombre de commande : {{ countItems }}</h3>
     <el-table :data="reverseItems" border fit highlight-current-row style="width: 100%">
       <el-table-column align="center" label="Commande" width="80">
         <template slot-scope="{row}">
-          <span>{{ row['.key'] }}</span>
+          <span>{{ row.key }}</span>
           <span v-if="row.inactive" style="float: left ;margin-top: -20px;margin-right:5px;">
             <br>
             <i style="color:#ff4949" class="el-icon-delete" size="medium" /> VOID
@@ -69,20 +44,17 @@
               cancel
             </el-button>
           </template>
-          <span v-for="n in row.items" v-else :key="'UPC-' +n.name">{{ n.UPC }} <br><br><br></span>
+          <span v-for="n in row.items" v-else :key="'UPC-' +n.name">{{ n.UPC }} <span v-if="n.notes">{{ n.notes }}</span>  <br><br><br></span>
         </template>
       </el-table-column>
 
       <el-table-column align="center" label="Actions" width="120">
         <template slot-scope="{row}">
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
-            UPC
+            UPC et Notes
           </el-button>
-          <el-button v-if="!row.inactive" type="primary" size="mini" style="margin:5px;" @click="handleUpdate2(row)">
-            VOID
-          </el-button>
-          <el-button v-if="row.inactive" type="primary" size="mini" style="margin:5px;" @click="handleUpdate3(row)">
-            UNVOID
+          <el-button type="primary" size="mini" style="margin:5px;" @click="handleUpdate2(row)">
+            Corrigé
           </el-button>
         </template>
       </el-table-column>
@@ -92,8 +64,10 @@
       <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
         Veuillez séparer vos UPCs par un virgule.<br><br>
         <el-form-item v-for="n in temp.items" :key="'UPC-' +n.name" :label="n.name" prop="type">
+          UPC
           <el-input v-model="n.UPC" />
-          <el-input-number v-model="n.count" />
+          Notes
+          <el-input v-model="n.notes" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -107,36 +81,14 @@
     </el-dialog>
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible2" width="800px">
+      <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
+        Êtes-vous sure d'avoir corrigés tout vos UPCs ?<br><br>
+      </el-form>
       <div slot="footer" class="dialog-footer">
-        Êtes-vous sure de vouloir supprimer les commandes actives?
         <el-button @click="dialogFormVisible2 = false">
           Cancel
         </el-button>
-        <el-button type="primary" @click="clearData()">
-          Confirm
-        </el-button>
-      </div>
-    </el-dialog>
-
-    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible3" width="800px">
-      <div slot="footer" class="dialog-footer">
-        Êtes-vous sure de vouloir annuler la commande active?
-        <el-button @click="dialogFormVisible3 = false">
-          Cancel
-        </el-button>
-        <el-button type="primary" @click="voidData(temp)">
-          Confirm
-        </el-button>
-      </div>
-    </el-dialog>
-
-    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible4" width="800px">
-      <div slot="footer" class="dialog-footer">
-        Êtes-vous sure de vouloir synchroniser les commandes vers lightspeed? Ceci est irréversible!
-        <el-button @click="dialogFormVisible4 = false">
-          Cancel
-        </el-button>
-        <el-button type="primary" @click="handleArchive">
+        <el-button type="primary" @click="updateData2(temp)">
           Confirm
         </el-button>
       </div>
@@ -177,6 +129,7 @@ export default {
       },
       products: [],
       products2: [],
+      products3: [],
       temp: {
         type: Array,
         count: Number
@@ -203,7 +156,7 @@ export default {
   },
   computed: {
     reverseItems() {
-      return this.products.slice().reverse()
+      return this.products3.slice().reverse()
     },
     countItems() {
       return this.products.length
@@ -214,38 +167,28 @@ export default {
   },
   methods: {
     async getList() {
-      const users = rtdb.ref('active')
-      this.$rtdbBind('products', users.orderByChild('timestamp')).then(user => {
-        for (const element of this.products) {
-          for (const [key, value] of Object.entries(element.items)) {
+      const users = rtdb.ref('error2')
+      this.$rtdbBind('products', users).then(user => {
+        for (const element2 of this.products) {
+          const keyOfThis = element2['.key']
+          element2[keyOfThis].key = keyOfThis
+          this.products3.push(element2[keyOfThis])
+          console.log(element2[keyOfThis].items)
+          for (const [key, value] of Object.entries(element2[keyOfThis].items)) {
             if (value.UPC) {
               console.log('yo')
             }
             console.log(`${key}: ${value}`)
             this.products2.push(value)
           }
+          console.log(this.products3)
+          console.log(this.products)
         }
-        console.log(this.products2)
-        console.log(this.products)
-      })
-    },
-    handleArchive() {
-      console.log('test2')
-      rtdb.ref('active').once('value', snapshot => {
-        var today = new Date()
-        today = today.getFullYear() + '-' + parseInt(today.getMonth() + 1) + '-' + today.getDate() + '-' + today.getHours() + '-' + today.getMinutes() + '-' + today.getSeconds()
-        console.log('test2' + today)
-        rtdb.ref('archive').child(today).set(snapshot.val())
-        rtdb.ref('processing').update(snapshot.val())
-        rtdb.ref('active').set(null)
-        this.dialogFormVisible4 = true
-      })
+      }
+      )
     },
     handleDelete() {
       this.dialogFormVisible2 = true
-    },
-    seeVoided() {
-      // this.dialogFormVisible2 = true
     },
     syncLightspeed() {
       this.dialogFormVisible4 = true
@@ -263,16 +206,7 @@ export default {
       this.temp = Object.assign({}, row) // copy obj
       this.temp.timestamp = new Date(this.temp.timestamp)
       this.dialogStatus = 'update'
-      this.dialogFormVisible3 = true
-      this.$nextTick(() => {
-        this.$refs['dataForm'].clearValidate()
-      })
-    },
-    handleUpdate3(row) {
-      for (const [key, value] of Object.entries(row.items)) {
-        console.log(key)
-        rtdb.ref('active').child(value.order).child('inactive').set(null)
-      }
+      this.dialogFormVisible2 = true
     },
     updateData(row) {
       /* for (const n of row.items) {
@@ -290,30 +224,39 @@ export default {
         } else {
           upc.push('0')
         }
-        rtdb.ref('active').child(value.order).child('items').child(key).child('UPC').set(upc)
-        rtdb.ref('active').child(value.order).child('items').child(key).child('count').set('' + value.count)
+        rtdb.ref('error2').child(value.order).child(value.order).child('items').child(key).child('UPC').set(upc)
+        if (value.notes) {
+          rtdb.ref('error2').child(value.order).child(value.order).child('items').child(key).child('notes').set(value.notes)
+        }
         console.log(key + upc.toString())
         this.dialogFormVisible = false
       }
       // console.log(row.items)
     },
-    voidData(row) {
-      for (const [key, value] of Object.entries(row.items)) {
-        rtdb.ref('active').child(value.order).child('items').child(key).child('count').set('' + 0)
-        rtdb.ref('active').child(value.order).child('inactive').set(true)
-        this.dialogFormVisible3 = false
+    updateData2(row) {
+      console.log(row)
+      for (const [key, value] of Object.entries(row)) {
+        if (key !== 'key' && key !== 'timestamp') {
+          for (const [key2, value2] of Object.entries(value)) {
+            console.log(key2)
+            for (const element2 of value2.UPC) {
+              const myObj = {
+                count: value2.count,
+                initial: '?',
+                final: '?'
+              }
+              rtdb.ref('succes').child(row.key).child(element2).set(myObj).then(() => {
+                rtdb.ref('error2').child(row.key).set(null)
+                this.dialogFormVisible2 = false
+              })
+            }
+          }
+          /* rtdb.ref('succes').child(row.key).child(key).set(value).then(() => {
+            rtdb.ref('negatif').child(row.key).child(key).set(null)
+            this.dialogFormVisible = false
+          })*/
+        }
       }
-    },
-    clearData() {
-      rtdb.ref('active').once('value', snapshot => {
-        var today = new Date()
-        today = today.getFullYear() + '-' + parseInt(today.getMonth() + 1) + '-' + today.getDate() + '-' + today.getHours() + '-' + today.getMinutes() + '-' + today.getSeconds()
-        console.log('test2' + today)
-        rtdb.ref('archive').child(today).set(snapshot.val()).then(user => {
-          rtdb.ref('active').set(null)
-        })
-      })
-      this.dialogFormVisible2 = false
     },
     cancelEdit(row) {
       row.title = row.originalTitle
