@@ -48,7 +48,7 @@
         </template>
       </el-table-column>
     </el-table>
-
+    <el-button type="success" @click="viewMore()">View More</el-button>
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible" width="800px">
       <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
         Êtes-vous sure d'avoir corrigés tout vos UPCs ?<br><br>
@@ -136,7 +136,7 @@ export default {
   methods: {
     async getList() {
       const users = rtdb.ref('succes')
-      this.$rtdbBind('products', users.limitToLast(500)).then(user => {
+      this.$rtdbBind('products', users.limitToLast(500 * this.listQuery.page)).then(user => {
         console.log(this.products)
       })
     },
@@ -147,6 +147,10 @@ export default {
         message: 'The title has been restored to the original value',
         type: 'warning'
       })
+    },
+    viewMore() {
+      this.listQuery.page = this.listQuery.page + 1
+      this.getList()
     },
     confirmEdit(row) {
       row.edit = false

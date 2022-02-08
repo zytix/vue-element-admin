@@ -15,7 +15,7 @@
       <el-table-column min-width="180px" align="center" label="UPC">
         <template slot-scope="{row}">
           <span v-for="(item, key) in row" :key="key">
-            <span v-if="key != 'notes'">{{ key }}<br><br></span>
+            <span v-if="key != 'notes'">{{ key }} &nbsp; &nbsp;<el-button icon="el-icon-search" circle @click="copyToClipBoard(key)" /><br><br></span>
             <span v-else>{{ item }}<br><br></span></span>
         </template>
       </el-table-column>
@@ -178,6 +178,9 @@ export default {
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()
       })
+    },
+    copyToClipBoard(textToCopy) {
+      navigator.clipboard.writeText(textToCopy)
     },
     handleUpdate2(row, key) {
       console.log(key)

@@ -95,19 +95,6 @@ export const constantRoutes = [
     ]
   },*/
   {
-    path: '/guide',
-    component: Layout,
-    redirect: '/guide/index',
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/guide/index'),
-        name: 'Guide',
-        meta: { title: 'Guide', icon: 'guide', noCache: true }
-      }
-    ]
-  },
-  {
     path: '/profile',
     component: Layout,
     redirect: '/profile/index',
@@ -137,7 +124,7 @@ export const asyncRoutes = [
     meta: {
       title: 'Permission',
       icon: 'lock',
-      roles: ['admin', 'editor'] // you can set roles in root nav
+      roles: ['admin'] // you can set roles in root nav
     },
     children: [
       {
@@ -148,7 +135,7 @@ export const asyncRoutes = [
           title: 'Page Permission',
           roles: ['admin'] // or you can only set roles in sub nav
         }
-      }
+      },
       /* {
          path: 'directive',
          component: () => import('@/views/permission/directive'),
@@ -157,16 +144,13 @@ export const asyncRoutes = [
            title: 'Directive Permission'
            // if do not set roles, means: this page does not require permission
          }
-       },
-        {
-         path: 'role',
-         component: () => import('@/views/permission/role'),
-         name: 'RolePermission',
-         meta: {
-           title: 'Role Permission',
-           roles: ['admin']
-         }
-       }*/
+       },*/
+      {
+        path: 'role',
+        component: () => import('@/views/permission/role'),
+        name: 'RolePermission',
+        meta: { title: 'Role Permission',
+          roles: ['admin'] }}
     ]
   },
 
@@ -182,13 +166,46 @@ export const asyncRoutes = [
       }
     ]
   },*/
-
+  {
+    path: '/employee',
+    component: Layout,
+    redirect: '/employee/index',
+    meta: {
+      title: 'Employee ',
+      icon: 'user',
+      roles: ['admin'] // you can set roles in root nav
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/employee/table'),
+        name: 'employee',
+        meta: {
+          title: 'Employee',
+          roles: ['admin'],
+          noCache: true }
+      }
+    ]
+  },
   /** when your routing map is too long, you can split it into small modules **/
   // componentsRouter,
   // chartsRouter,
   // nestedRouter,
   tableRouter,
-
+  {
+    path: '/cartecadeau',
+    component: Layout,
+    redirect: '/table/cartecadeau',
+    children: [
+      {
+        path: 'cartecadeau',
+        component: () => import('@/views/table/cartecadeau'),
+        name: 'cartecadeauTable',
+        meta: { title: 'Gift Cards',
+          roles: ['admin'] }
+      }
+    ]
+  },
   /* {
     path: '/example',
     component: Layout,

@@ -27,12 +27,16 @@
     </div>-->
     <h3>Nombre de commande : {{ countItems }}</h3>
     <el-table :data="reverseItems" border fit highlight-current-row style="width: 100%">
-      <el-table-column align="center" label="Commande" width="80">
+      <el-table-column align="center" label="Commande" width="140">
         <template slot-scope="{row}">
           <span>{{ row['.key'] }}</span>
           <span v-if="row.inactive" style="float: left ;margin-top: -20px;margin-right:5px;">
             <br>
             <i style="color:#ff4949" class="el-icon-delete" size="medium" /> VOID
+          </span>
+          <span v-if="row.doublons" style="float: left ;margin-top: -20px;margin-right:5px;">
+            <br>
+            <i style="color:#ff4949" class="el-icon-delete" size="medium" /> DOUBLONS
           </span>
         </template>
       </el-table-column>
@@ -88,11 +92,11 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible" width="800px">
+    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible" :close-on-click-modal="false" width="800px">
       <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
         Veuillez séparer vos UPCs par un virgule.<br><br>
         <el-form-item v-for="n in temp.items" :key="'UPC-' +n.name" :label="n.name" prop="type">
-          <el-input v-model="n.UPC" />
+          <el-input v-model="n.UPC" @keyup.enter.native="updateData(temp)" />
           <el-input-number v-model="n.count" />
         </el-form-item>
       </el-form>
@@ -238,7 +242,7 @@ export default {
         rtdb.ref('archive').child(today).set(snapshot.val())
         rtdb.ref('processing').update(snapshot.val())
         rtdb.ref('active').set(null)
-        this.dialogFormVisible4 = true
+        this.dialogFormVisible4 = false
       })
     },
     handleDelete() {

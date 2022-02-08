@@ -1,10 +1,14 @@
 <template>
   <div class="app-container">
-    <h3>Nombre de commande : {{ countItems }}</h3>
+    <el-button type="primary" icon="el-icon-refresh" @click="addGiftCard">
+      Ajoutez une carte cadeau
+    </el-button>
+    <h3>Nombre de cartes cadeaux : {{ countItems }}</h3>
+    <h3>Nombre de cartes cadeaux : {{ countBalance }}</h3>
     <el-table :data="reverseItems" border fit highlight-current-row style="width: 100%">
-      <el-table-column align="center" label="Commande" width="80">
+      <el-table-column align="center" label="Nom" width="160">
         <template slot-scope="{row}">
-          <span>{{ row['.key'] }}</span>
+          <span>{{ row.name }}</span>
           <span v-if="row.inactive" style="float: left ;margin-top: -20px;margin-right:5px;">
             <br>
             <i style="color:#ff4949" class="el-icon-delete" size="medium" /> VOID
@@ -12,64 +16,42 @@
         </template>
       </el-table-column>
 
-      <el-table-column min-width="180px" align="center" label="UPC">
+      <el-table-column min-width="180px" align="center" label="Numéro">
         <template slot-scope="{row}">
-          <span v-for="(item, key) in row" :key="key">
-            <span v-if="key != 'notes'">{{ key }} &nbsp; &nbsp;<el-button icon="el-icon-search" circle @click="copyToClipBoard(key)" /><br><br></span>
-            <span v-else>{{ item }}<br><br></span></span>
+          <span>{{ row.card }}<br><br><br></span>
         </template>
       </el-table-column>
 
-      <el-table-column width="180px" align="center" label="Erreur">
+      <el-table-column width="180px" align="center" label="Balance">
         <template slot-scope="{row}">
-          <span v-for="(item, key) in row" :key="key"><el-popover
-            placement="top-start"
-            width="200"
-            trigger="hover"
-            :content="item.error"
-          >
-            <el-button slot="reference">Erreur</el-button>
-          </el-popover><br><br><br></span>
+          <span>{{ row.balance }}<br><br><br></span>
         </template>
       </el-table-column>
 
-      <el-table-column width="180px" align="center" label="Quantité">
+      <el-table-column width="180px" align="center" label="Personne">
         <template slot-scope="{row}">
-          <span v-for="(item, key) in row" :key="key">{{ item.count }}<br><br><br></span>
+          <span>{{ row.firstName + ' ' + row.lastName }}<br><br><br></span>
         </template>
       </el-table-column>
 
-      <el-table-column class-name="status-col" label="Initial" width="110">
+      <el-table-column width="180px" align="center" label="Lightspeed">
         <template slot-scope="{row}">
-          <span v-for="(item, key) in row" :key="key">{{ item.initial }}<br><br><br></span>
+          <span v-if="!row.lightspeedCreated || row.lightspeedUpdated"><i style="color:#ff4949" class="el-icon-error" size="medium" /></span>
+          <span v-else-if="row.lightspeedCreated"><i style="color:#ff4949" class="el-icon-check" size="medium" /></span>
         </template>
       </el-table-column>
 
-      <el-table-column min-width="120px" label="Final">
+      <el-table-column width="180px" align="center" label="Shopify">
         <template slot-scope="{row}">
-          <template v-if="row.edit">
-            <el-input v-model="row.UPC" class="edit-input" size="small" />
-            <el-button
-              class="cancel-btn"
-              size="small"
-              icon="el-icon-refresh"
-              type="warning"
-              @click="cancelEdit(row)"
-            >
-              cancel
-            </el-button>
-          </template>
-          <span v-for="(item, key) in row" v-else :key="key">{{ item.final }}<br><br><br></span>
+          <span v-if="!row.shopifyCreated || row.shopifyUpdated"><i style="color:#ff4949" class="el-icon-error" size="medium" /></span>
+          <span v-else-if="row.shopifyCreated"><i style="color:#ff4949" class="el-icon-check" size="medium" /></span>
         </template>
       </el-table-column>
 
       <el-table-column align="center" label="Actions" width="120">
         <template slot-scope="{row}">
           <el-button type="primary" size="mini" @click="handleUpdate(row,row['.key'])">
-            Envoyez succès
-          </el-button>
-          <el-button type="primary" size="mini" style="margin:5px;" @click="handleUpdate2(row,row['.key'])">
-            Notes
+            Balance
           </el-button>
         </template>
       </el-table-column>
@@ -77,7 +59,10 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible" width="800px">
       <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
-        Êtes-vous sure d'avoir corrigés tout vos UPCs ?<br><br>
+        Éditez la balance? <br><br>
+        <el-form-item :key="'UPC-'" :label="'balance'" prop="type">
+          <el-input v-model="temp.balance" />
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">
@@ -91,8 +76,16 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible2" width="800px">
       <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
-        <el-form-item :key="'notes'" :label="'Notes'" prop="type">
-          <el-input v-model="temp.notes" />
+        Veuillez remplir les champs pour ajouter une nouvelle carte cadeau!<br>
+        <el-form-item :key="'UPC-'" prop="type">
+          Numéro de carte
+          <el-input v-model="temp.card" type="number" :label="'Numéro de carte'" />
+          Montant
+          <el-input v-model="temp.balance" type="number" :label="'Montant'" />
+          Prénom
+          <el-input v-model="temp.firstName" :label="'Prénom'" />
+          Nom
+          <el-input v-model="temp.lastName" :label="'Nom'" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -140,9 +133,8 @@ export default {
       },
       products: [],
       products2: [],
+      totalBalance: 0,
       temp: {
-        type: Array,
-        count: Number
       },
       dialogFormVisible: false,
       dialogFormVisible2: false,
@@ -166,7 +158,15 @@ export default {
   },
   computed: {
     reverseItems() {
-      return this.products.slice().reverse()
+      return this.products.slice()
+    },
+    countBalance() {
+      for (const [key, value] of Object.entries(this.products)) {
+        console.log(key)
+        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+        this.totalBalance += parseFloat(value.balance.substr(1))
+      }
+      return this.totalBalance
     },
     countItems() {
       return this.products.length
@@ -177,13 +177,10 @@ export default {
   },
   methods: {
     async getList() {
-      const users = rtdb.ref('error')
+      const users = rtdb.ref('giftCards')
       this.$rtdbBind('products', users).then(user => {
-        console.log(this.products)
+        // console.log(this.products)
       })
-    },
-    copyToClipBoard(textToCopy) {
-      navigator.clipboard.writeText(textToCopy)
     },
     handleUpdate(row, key) {
       console.log(key)
@@ -194,6 +191,9 @@ export default {
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()
       })
+    },
+    addGiftCard() {
+      this.dialogFormVisible2 = true
     },
     handleUpdate2(row, key) {
       console.log(key)
@@ -218,7 +218,15 @@ export default {
       }
     },
     updateData2(row) {
-      rtdb.ref('error').child(row.key).child('notes').set(row.notes).then(() => { this.dialogFormVisible2 = false })
+      row.lightspeedCreated = false
+      row.lightspeedUpdated = false
+      row.shopifyCreated = false
+      row.shopifyUpdated = false
+      row.name = 'Carte ' + row.card
+      row.balance = '$' + row.balance + '.00'
+      row.card = Number(row.card)
+      rtdb.ref('giftCards').push().set(row)
+      this.dialogFormVisible2 = false
     },
     cancelEdit(row) {
       row.title = row.originalTitle

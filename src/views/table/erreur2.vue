@@ -1,10 +1,11 @@
 <template>
   <div class="app-container">
     <h3>Nombre de commande : {{ countItems }}</h3>
-    <el-table :data="reverseItems" border fit highlight-current-row style="width: 100%">
-      <el-table-column align="center" label="Commande" width="80">
+    <el-table :key="reverseItems" :data="reverseItems" border fit highlight-current-row style="width: 100%">
+      <el-table-column align="center" label="Commande" width="100">
         <template slot-scope="{row}">
-          <span>{{ row.key }}</span>
+          <span>{{ row.key }}</span><br><br>
+          <span>Vérifiez <br> {{ row.error }}</span>
           <span v-if="row.inactive" style="float: left ;margin-top: -20px;margin-right:5px;">
             <br>
             <i style="color:#ff4949" class="el-icon-delete" size="medium" /> VOID
@@ -60,12 +61,12 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible" width="800px">
+    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible" :close-on-click-modal="false" width="800px">
       <el-form ref="dataForm" :model="temp" label-position="left" width="100%" style="width: 400px; margin-left:50px;">
         Veuillez séparer vos UPCs par un virgule.<br><br>
         <el-form-item v-for="n in temp.items" :key="'UPC-' +n.name" :label="n.name" prop="type">
           UPC
-          <el-input v-model="n.UPC" />
+          <el-input v-model="n.UPC" @keyup.enter.native="updateData(temp)" />
           Notes
           <el-input v-model="n.notes" />
         </el-form-item>
@@ -93,6 +94,7 @@
         </el-button>
       </div>
     </el-dialog>
+
   </div>
 </template>
 
@@ -156,7 +158,7 @@ export default {
   },
   computed: {
     reverseItems() {
-      return this.products3.slice().reverse()
+      return this.products3.slice()
     },
     countItems() {
       return this.products.length
@@ -171,6 +173,8 @@ export default {
       this.$rtdbBind('products', users).then(user => {
         for (const element2 of this.products) {
           const keyOfThis = element2['.key']
+          const error = element2.error
+          element2[keyOfThis].error = error
           element2[keyOfThis].key = keyOfThis
           this.products3.push(element2[keyOfThis])
           console.log(element2[keyOfThis].items)
@@ -189,9 +193,6 @@ export default {
     },
     handleDelete() {
       this.dialogFormVisible2 = true
-    },
-    syncLightspeed() {
-      this.dialogFormVisible4 = true
     },
     handleUpdate(row) {
       this.temp = Object.assign({}, row) // copy obj
@@ -234,29 +235,19 @@ export default {
       // console.log(row.items)
     },
     updateData2(row) {
-      console.log(row)
-      for (const [key, value] of Object.entries(row)) {
-        if (key !== 'key' && key !== 'timestamp') {
-          for (const [key2, value2] of Object.entries(value)) {
-            console.log(key2)
-            for (const element2 of value2.UPC) {
-              const myObj = {
-                count: value2.count,
-                initial: '?',
-                final: '?'
+      console.log('ici' + row.toString())
+      rtdb.ref('error2').child(row.key).once('value', snapshot => {
+        rtdb.ref('processing').child(row.key).set(snapshot.child(row.key).val()).then(processIt => {
+          rtdb.ref('error2').child(row.key).set(null).then(nullifyIt => {
+            for (var i = this.products3.length - 1; i >= 0; --i) {
+              if (this.products3[i].key === row.key) {
+                this.products3.splice(i, 1)
               }
-              rtdb.ref('succes').child(row.key).child(element2).set(myObj).then(() => {
-                rtdb.ref('error2').child(row.key).set(null)
-                this.dialogFormVisible2 = false
-              })
             }
-          }
-          /* rtdb.ref('succes').child(row.key).child(key).set(value).then(() => {
-            rtdb.ref('negatif').child(row.key).child(key).set(null)
-            this.dialogFormVisible = false
-          })*/
-        }
-      }
+            this.dialogFormVisible2 = false
+          })
+        })
+      })
     },
     cancelEdit(row) {
       row.title = row.originalTitle
